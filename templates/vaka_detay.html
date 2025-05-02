@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vaka Detayı</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { 
+            padding: 20px; 
+            background-color: #f8f9fa; 
+        }
+        .content-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .content-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .nav-container {
+            margin-bottom: 20px;
+        }
+        .badge-kanal {
+            padding: 0.5em 0.6em;
+            font-size: 0.75em;
+            font-weight: 600;
+            border-radius: 4px;
+        }
+        .badge-kart {
+            background-color: #4e73df;
+            color: white;
+        }
+        .badge-dijital {
+            background-color: #36b9cc;
+            color: white;
+        }
+        .badge-pos {
+            background-color: #1cc88a;
+            color: white;
+        }
+        .badge-basvuru {
+            background-color: #f6c23e;
+            color: white;
+        }
+        .badge-diger {
+            background-color: #858796;
+            color: white;
+        }
+        .money-positive {
+            color: #1cc88a;
+            font-weight: 600;
+        }
+        .money-negative {
+            color: #e74a3b;
+            font-weight: 600;
+        }
+        .money-zero {
+            color: #858796;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Navigasyon Menüsü -->
+        <div class="nav-container">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light rounded">
+                <div class="container-fluid">
+                    <span class="navbar-brand">Fraud Yönetim Sistemi</span>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('kayit_ekle') }}">Vaka Kayıt</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('vakalar') }}">Vakalar</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('fraud_trend') }}">Fraud Trend Analizi</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('menu') }}"><i class="bi bi-house-door"></i> Ana Sayfa</a>
+                            </li>
+                            {% if session.get('admin_giris') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('kullanici_yonetimi') }}">Kullanıcı Yönetimi</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin Paneli</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        <a href="{{ url_for('cikis') }}" class="btn btn-outline-danger">Çıkış</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Geri Dönüş Butonu -->
+        <div class="mb-3">
+            <a href="{{ url_for('vakalar') }}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Vakalar Listesine Dön
+            </a>
+        </div>
+
+        <!-- Vaka Başlığı -->
+        <div class="content-section">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="bi bi-file-earmark-text"></i> 
+                    Vaka Detayı: {{ vaka['Ad-Soyad / Üye İş Yeri Adı'] }}
+                    <span class="badge badge-kanal
+                        {% if vaka['Kanal'] == 'Kart' %}badge-kart
+                        {% elif vaka['Kanal'] == 'Dijital Bankacılık' %}badge-dijital
+                        {% elif vaka['Kanal'] == 'POS' %}badge-pos
+                        {% elif vaka['Kanal'] == 'Başvuru' %}badge-basvuru
+                        {% else %}badge-diger{% endif %}">
+                        {{ vaka['Kanal'] }}
+                    </span>
+                </h2>
+                <div>
+                    <a href="{{ url_for('duzenle_vaka', vaka_index=vaka_index) }}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Düzenle
+                    </a>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#silmeModal">
+                        <i class="bi bi-trash"></i> Sil
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Silme Onay Modalı -->
+        <div class="modal fade" id="silmeModal" tabindex="-1" aria-labelledby="silmeModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="silmeModalLabel">Vaka Silme Onayı</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0">Bu vakayı silmek istediğinizden emin misiniz?</p>
+                        <p><strong>{{ vaka['Ad-Soyad / Üye İş Yeri Adı'] }}</strong> için oluşturulan bu vaka kalıcı olarak silinecektir.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <a href="{{ url_for('sil_vaka', vaka_index=vaka_index) }}" class="btn btn-danger">Evet, Sil</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vaka Detayları -->
+        <div class="row">
+            <!-- Temel Bilgiler -->
+            <div class="col-md-6 mb-4">
+                <div class="content-section h-100">
+                    <h3 class="text-info">
+                        <i class="bi bi-info-circle"></i> Temel Bilgiler
+                    </h3>
+                    <table class="table table-striped">
+                        <tr>
+                            <th width="40%">Çeyreklik Dönem:</th>
+                            <td>{{ vaka['Çeyreklik Dönem'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Vaka Türü:</th>
+                            <td>{{ vaka['Vaka Türü'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>İşlem Türü:</th>
+                            <td>{{ vaka['İşlem Türü'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Vaka Giren Kişi:</th>
+                            <td>{{ vaka['Vaka Giren Kişi'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>İnceleyen Kişi:</th>
+                            <td>{{ vaka['İnceleyen Kişi'] }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Müşteri Bilgileri -->
+            <div class="col-md-6 mb-4">
+                <div class="content-section h-100">
+                    <h3 class="text-success">
+                        <i class="bi bi-person"></i> Müşteri Bilgileri
+                    </h3>
+                    <table class="table table-striped">
+                        <tr>
+                            <th width="40%">Ad-Soyad / Üye İş Yeri:</th>
+                            <td>{{ vaka['Ad-Soyad / Üye İş Yeri Adı'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Müşteri No / TCKN / Kart No:</th>
+                            <td>{{ vaka['Müşteri No / TCKN / Kart No'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>İşlem / Risk Tespiti Tarihi:</th>
+                            <td>{{ vaka['Sahte İşlem / Risk Tespiti Tarihi'] }}</td>
+                        </tr>
+                        {% if vaka['Kanal'] == 'Kart' %}
+                        {% if vaka.get('CPP Tespiti') %}
+                        <tr>
+                            <th>CPP Tespiti:</th>
+                            <td>{{ vaka['CPP Tespiti'] }}</td>
+                        </tr>
+                        {% endif %}
+                        
+                        {% if vaka.get('Pos/ATM') %}
+                        <tr>
+                            <th>Pos/ATM:</th>
+                            <td>{{ vaka['Pos/ATM'] }}</td>
+                        </tr>
+                        {% endif %}
+                        
+                        {% if vaka.get('Kopyalama Onus/Not Onus') %}
+                        <tr>
+                            <th>Kopyalama Onus/Not Onus:</th>
+                            <td>{{ vaka['Kopyalama Onus/Not Onus'] }}</td>
+                        </tr>
+                        {% endif %}
+                        
+                        {% if vaka.get('Kopyalama Yeri/ Şüpheli İş yeri') %}
+                        <tr>
+                            <th>Kopyalama Yeri / Şüpheli İş yeri:</th>
+                            <td>{{ vaka['Kopyalama Yeri/ Şüpheli İş yeri'] }}</td>
+                        </tr>
+                        {% endif %}
+                        
+                        {% if vaka.get('ATM Kart Kopyalama Yöntemi') %}
+                        <tr>
+                            <th>ATM Kart Kopyalama Yöntemi:</th>
+                            <td>{{ vaka['ATM Kart Kopyalama Yöntemi'] }}</td>
+                        </tr>
+                        {% endif %}
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Finansal Bilgiler -->
+            <div class="col-12 mb-4">
+                <div class="content-section">
+                    <h3 class="text-danger">
+                        <i class="bi bi-currency-exchange"></i> Finansal Bilgiler
+                    </h3>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card">
+                                <div class="card-header bg-warning text-white">Kullanılan Tutar</div>
+                                <div class="card-body text-center">
+                                    <h4>{{ "{:,.2f}".format(vaka['Kullanılan Tutar']|float) }} ₺</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card">
+                                <div class="card-header bg-danger text-white">Müşteri Zararı</div>
+                                <div class="card-body text-center">
+                                    <h4>{{ "{:,.2f}".format(vaka['Müşteri Zararı']|float) }} ₺</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card">
+                                <div class="card-header bg-danger text-white">Banka Zararı</div>
+                                <div class="card-body text-center">
+                                    <h4>{{ "{:,.2f}".format(vaka['Banka Zararı']|float) }} ₺</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">Kurtarılan Tutar</div>
+                                <div class="card-body text-center">
+                                    <h4>{{ "{:,.2f}".format(vaka['Kurtarılan Tutar']|float) }} ₺</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mt-3">
+                        <div class="card-header bg-primary text-white">Toplam Risk</div>
+                        <div class="card-body text-center">
+                            <h3>{{ "{:,.2f}".format(vaka['Toplam Risk (TL)']|float) }} ₺</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vaka Detayı -->
+            <div class="col-md-6 mb-4">
+                <div class="content-section h-100">
+                    <h3 class="text-secondary">
+                        <i class="bi bi-card-text"></i> Vaka Detayları
+                    </h3>
+                    <div class="p-3 border rounded bg-light">
+                        <p style="white-space: pre-line; overflow-wrap: break-word; word-break: break-word; max-height: 300px; overflow-y: auto;">{{ vaka['Vaka Detayı'] }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analist Notu -->
+            <div class="col-md-6 mb-4">
+                <div class="content-section h-100">
+                    <h3 class="text-dark">
+                        <i class="bi bi-pencil"></i> Analist Notu
+                    </h3>
+                    <div class="p-3 border rounded bg-light">
+                        <p style="white-space: pre-line; overflow-wrap: break-word; word-break: break-word; max-height: 300px; overflow-y: auto;">{{ vaka['Analist Notu'] }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Geri Dönüş Butonu (alt) -->
+        <div class="mb-5 text-center">
+            <a href="{{ url_for('vakalar') }}" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> Vakalar Listesine Dön
+            </a>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

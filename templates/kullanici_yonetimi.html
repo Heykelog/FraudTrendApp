@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kullanıcı Yönetimi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .content-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .content-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .nav-container {
+            margin-bottom: 20px;
+        }
+        .user-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-height: 65vh;
+            overflow-y: auto;
+        }
+        .user-item {
+            background-color: white;
+            border-radius: 6px;
+            padding: 10px 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            border-left: 3px solid #0d6efd;
+        }
+        .user-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e9ecef;
+            border-radius: 50%;
+        }
+        .user-name {
+            font-weight: 500;
+            margin: 0;
+        }
+        .user-id {
+            color: #6c757d;
+            font-size: 0.8rem;
+            margin: 0;
+        }
+        .add-form {
+            display: flex;
+            gap: 10px;
+        }
+        .add-form input {
+            border-radius: 6px;
+        }
+        .add-form button {
+            border-radius: 6px;
+        }
+        @media (min-width: 768px) {
+            .user-item {
+                width: calc(50% - 5px);
+            }
+        }
+        @media (min-width: 992px) {
+            .user-item {
+                width: calc(33.333% - 7px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigasyon Menüsü -->
+        <div class="nav-container">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light rounded">
+                <div class="container-fluid">
+                    <span class="navbar-brand">Fraud Yönetim Sistemi</span>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_panel') }}"><i class="bi bi-house-door"></i> Ana Sayfa</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('kayit_ekle') }}">Vaka Kayıt</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('vakalar') }}">Vakalar</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('fraud_trend') }}">Fraud Trend Analizi</a>
+                            </li>
+                            {% if session.get('admin_giris') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin Paneli</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        <a href="{{ url_for('cikis') }}" class="btn btn-outline-danger">Çıkış</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <!-- Kullanıcı Listesi -->
+            <div class="col-md-8">
+                <div class="content-section">
+                    <h2><i class="bi bi-people"></i> Kullanıcı Listesi <span class="badge bg-secondary">{{ kullanicilar|length }}</span></h2>
+                    
+                    <div class="user-list">
+                        {% for kullanici in kullanicilar %}
+                        <div class="user-item">
+                            <div class="user-info">
+                                <div class="user-icon">
+                                    <i class="bi bi-person"></i>
+                                </div>
+                                <div>
+                                    <p class="user-name">{{ kullanici.ad }}</p>
+                                    <p class="user-id">ID: {{ kullanici.id }}</p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#silModal{{ kullanici.id }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Silme Onay Modalı -->
+                        <div class="modal fade" id="silModal{{ kullanici.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-sm">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-danger text-white">
+                                        <h5 class="modal-title">Silme Onayı</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="mb-1"><b>{{ kullanici.ad }}</b> kullanıcısını silmek istediğinizden emin misiniz?</p>
+                                        <small class="text-danger"><i class="bi bi-exclamation-triangle"></i> Bu işlem geri alınamaz!</small>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                        <a href="{{ url_for('sil_kullanici', kullanici_id=kullanici.id) }}" class="btn btn-sm btn-danger">Sil</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Yeni Kullanıcı Ekleme -->
+            <div class="col-md-4">
+                <div class="content-section">
+                    <h2><i class="bi bi-person-plus"></i> Yeni Kullanıcı</h2>
+                    
+                    <form method="POST" action="{{ url_for('kullanici_yonetimi') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="yeni_kullanici" class="form-label">Kullanıcı Adı Soyadı</label>
+                            <input type="text" class="form-control" id="yeni_kullanici" name="yeni_kullanici" placeholder="Adı Soyadı" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-circle me-1"></i> Kullanıcı Ekle
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

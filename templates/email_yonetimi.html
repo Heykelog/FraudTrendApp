@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-posta Bildirim Ayarları</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { 
+            padding: 20px; 
+            background-color: #f8f9fa;
+        }
+        .content-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .content-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .nav-container {
+            margin-bottom: 20px;
+        }
+        .admin-badge {
+            background-color: #dc3545;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            margin-left: 10px;
+            font-size: 0.8rem;
+        }
+        .form-section {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .form-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .help-text {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .toggle-password {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigasyon Menüsü -->
+        <div class="nav-container">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light rounded">
+                <div class="container-fluid">
+                    <span class="navbar-brand">Fraud Yönetim Sistemi <span class="admin-badge">Admin</span></span>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_panel') }}"><i class="bi bi-house-door"></i> Ana Sayfa</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('vakalar') }}">Vakalar</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('fraud_trend') }}">Fraud Trend Analizi</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin Paneli</a>
+                            </li>
+                        </ul>
+                        <a href="{{ url_for('cikis') }}" class="btn btn-outline-danger">Çıkış</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Ana Başlık -->
+        <div class="content-section">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>E-posta Bildirim Ayarları</h2>
+                <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Admin Paneline Dön
+                </a>
+            </div>
+            <p class="lead">Vaka bildirimleri için e-posta ayarlarını yapılandırın.</p>
+            
+            <!-- Bilgi Kutusu -->
+            <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle-fill me-2"></i> <strong>Bilgi:</strong> 
+                Bu ayarlar, yeni bir vaka eklendikten sonra belirlediğiniz süre içinde otomatik e-posta bildirimi gönderilmesini sağlar. 
+                SMTP sunucu ayarlarınızı doğru yapılandırdığınızdan emin olun.
+            </div>
+        </div>
+
+        <!-- E-posta Ayarları Formu -->
+        <div class="row">
+            <div class="col-md-12">
+                <form method="POST" action="{{ url_for('email_yonetimi') }}" class="form-section">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    
+                    <h3>SMTP Sunucu Ayarları</h3>
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <label for="smtp_sunucu" class="form-label">SMTP Sunucu Adresi</label>
+                            <input type="text" class="form-control" id="smtp_sunucu" name="smtp_sunucu" 
+                                   value="{{ ayarlar.smtp_sunucu }}" required>
+                            <div class="help-text">Örn: smtp.gmail.com, smtp.office365.com</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="smtp_port" class="form-label">SMTP Port</label>
+                            <input type="number" class="form-control" id="smtp_port" name="smtp_port" 
+                                   value="{{ ayarlar.smtp_port }}" required>
+                            <div class="help-text">Genellikle 587 (TLS) veya 465 (SSL)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <label for="kullanici_adi" class="form-label">SMTP Kullanıcı Adı</label>
+                            <input type="text" class="form-control" id="kullanici_adi" name="kullanici_adi" 
+                                   value="{{ ayarlar.kullanici_adi }}" required>
+                            <div class="help-text">Genellikle e-posta adresiniz</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="sifre" class="form-label">SMTP Şifre</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="sifre" name="sifre" 
+                                       placeholder="Şifreyi değiştirmek için doldurun">
+                                <span class="input-group-text toggle-password" onclick="togglePasswordVisibility()">
+                                    <i class="bi bi-eye"></i>
+                                </span>
+                            </div>
+                            <div class="help-text">Değiştirmek istemiyorsanız boş bırakın</div>
+                        </div>
+                    </div>
+                    
+                    <h3>Bildirim Ayarları</h3>
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <label for="gonderen_email" class="form-label">Gönderen E-posta Adresi</label>
+                            <input type="email" class="form-control" id="gonderen_email" name="gonderen_email" 
+                                   value="{{ ayarlar.gonderen_email }}" required>
+                            <div class="help-text">E-postalar bu adresten gönderilecek</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="alici_email" class="form-label">Alıcı E-posta Adresi</label>
+                            <input type="email" class="form-control" id="alici_email" name="alici_email" 
+                                   value="{{ ayarlar.alici_email }}" required>
+                            <div class="help-text">Bildirimler bu adrese gönderilecek</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <label for="bildirim_saati" class="form-label">Günlük Bildirim Saati</label>
+                            <select class="form-control" id="bildirim_saati" name="bildirim_saati" required>
+                                {% for saat in range(0, 24) %}
+                                <option value="{{ saat }}" {% if ayarlar.bildirim_saati == saat %}selected{% endif %}>{{ "%02d"|format(saat) }}:00</option>
+                                {% endfor %}
+                            </select>
+                            <div class="help-text">Günlük özet bildiriminin gönderileceği saat</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" id="bildirim_aktif" name="bildirim_aktif"
+                                       {% if ayarlar.bildirim_aktif %}checked{% endif %}>
+                                <label class="form-check-label" for="bildirim_aktif">E-posta Bildirimlerini Etkinleştir</label>
+                            </div>
+                            <div class="help-text">E-posta bildirimlerini açıp kapatabilirsiniz</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="test_email_gonder" name="test_email_gonder">
+                            <label class="form-check-label" for="test_email_gonder">Ayarları kaydettikten sonra test e-postası gönder</label>
+                        </div>
+                        <div class="help-text">Ayarlarınızı doğrulamak için bir test e-postası göndermek isterseniz işaretleyin</div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-secondary me-2">İptal</a>
+                        <button type="submit" class="btn btn-primary">Ayarları Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function togglePasswordVisibility() {
+            const passwordField = document.getElementById('sifre');
+            const icon = document.querySelector('.toggle-password i');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                passwordField.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        }
+    </script>
+</body>
+</html> 

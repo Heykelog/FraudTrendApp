@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Paneli</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { 
+            padding: 20px; 
+            background-color: #f8f9fa; 
+        }
+        .content-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .content-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .nav-container {
+            margin-bottom: 20px;
+        }
+        .card {
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            color: #3498db;
+        }
+        .stats-card {
+            text-align: center;
+            padding: 20px;
+        }
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .admin-badge {
+            background-color: #dc3545;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            margin-left: 10px;
+            font-size: 0.8rem;
+        }
+        .feature-card {
+            border-left: 5px solid #3498db;
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            height: 100%;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        .feature-icon {
+            font-size: 2.5rem;
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-active {
+            background-color: #28a745;
+        }
+        .status-inactive {
+            background-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigasyon Menüsü -->
+        <div class="nav-container">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light rounded">
+                <div class="container-fluid">
+                    <span class="navbar-brand">Fraud Yönetim Sistemi <span class="admin-badge">Admin</span></span>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_panel') }}"><i class="bi bi-house-door"></i> Ana Sayfa</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('vakalar') }}">Vakalar</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('fraud_trend') }}">Fraud Trend Analizi</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="{{ url_for('admin_panel') }}">Admin Paneli</a>
+                            </li>
+                        </ul>
+                        <a href="{{ url_for('cikis') }}" class="btn btn-outline-danger">Çıkış</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Ana Başlık -->
+        <div class="content-section">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>Admin Kontrol Paneli</h2>
+                <span class="text-muted">Hoş geldiniz, Admin</span>
+            </div>
+            <p class="lead">Sistem yönetimi ve özel fonksiyonlara buradan erişebilirsiniz.</p>
+            
+            <!-- Admin yetki bilgilendirmesi -->
+            <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle-fill me-2"></i> <strong>Bilgi:</strong> Admin kullanıcılar vaka ekleyemez. Vaka ekleme işlemi sadece normal kullanıcılar tarafından yapılabilir. Admin olarak mevcut vakaları görüntüleyebilir ve yönetebilirsiniz.
+            </div>
+        </div>
+
+        <!-- Özel Yönetim Kartları -->
+        <div class="row mb-4">
+            <!-- Dashboard Kart -->
+            <div class="col-md-3">
+                <div class="feature-card p-4">
+                    <div class="feature-icon">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <h4 class="mb-3">Detaylı Dashboard</h4>
+                    <p class="text-muted mb-4">Zaman bazlı istatistikler, vaka analizleri ve detaylı raporlarına erişim</p>
+                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">
+                        Dashboard'a Git <i class="bi bi-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Excel Kart -->
+            <div class="col-md-3">
+                <div class="feature-card p-4">
+                    <div class="feature-icon">
+                        <i class="bi bi-file-earmark-excel"></i>
+                    </div>
+                    <h4 class="mb-3">Fraud Trend Excel</h4>
+                    <p class="text-muted mb-4">Tüm fraud verileri ve trendleriyle birlikte kapsamlı Excel raporu</p>
+                    <a href="{{ url_for('download_full_excel') }}" class="btn btn-success">
+                        <i class="bi bi-download me-2"></i>Excel İndir
+                    </a>
+                </div>
+            </div>
+            
+            <!-- İnceleyen Raporu Kart -->
+            <div class="col-md-3">
+                <div class="feature-card p-4">
+                    <div class="feature-icon">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h4 class="mb-3">İnceleyen Kişi Raporu</h4>
+                    <p class="text-muted mb-4">Vakayı inceleyen kişi bazlı ayrıntılı istatistikler ve raporlar</p>
+                    <a href="{{ url_for('inceleyenler_raporu') }}" class="btn btn-primary">
+                        Rapora Git <i class="bi bi-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- E-posta Yönetimi Kart -->
+            <div class="col-md-3">
+                <div class="feature-card p-4">
+                    <div class="feature-icon">
+                        <i class="bi bi-envelope"></i>
+                    </div>
+                    <h4 class="mb-3">E-posta Bildirimleri</h4>
+                    <p class="text-muted mb-3">Vaka bildirim e-postaları için SMTP ve bildirim ayarları</p>
+                    <div class="mb-3">
+                        <span class="status-indicator {% if email_bildirim_aktif %}status-active{% else %}status-inactive{% endif %}"></span>
+                        <small class="text-muted">Durum: {% if email_bildirim_aktif %}Aktif{% else %}Devre Dışı{% endif %}</small>
+                    </div>
+                    <a href="{{ url_for('email_yonetimi') }}" class="btn btn-primary">
+                        Ayarları Düzenle <i class="bi bi-gear ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hızlı Erişim Kartları -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="card-icon">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <h5 class="card-title">Kullanıcı Yönetimi</h5>
+                        <p class="card-text">Kullanıcıları ekle, düzenle ve yönet</p>
+                        <a href="{{ url_for('kullanici_yonetimi') }}" class="btn btn-primary">Kullanıcılar</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="card-icon">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </div>
+                        <h5 class="card-title">Vaka İşlemleri</h5>
+                        <p class="card-text">Tüm vakaları görüntüle ve yönet (sadece mevcut vakalar)</p>
+                        <a href="{{ url_for('vakalar') }}" class="btn btn-primary">Vakalar</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="card-icon">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <h5 class="card-title">Fraud Analizi</h5>
+                        <p class="card-text">Fraud trend raporlarını görüntüle</p>
+                        <a href="{{ url_for('fraud_trend') }}" class="btn btn-primary">Analiz</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sistem Özeti -->
+        <div class="content-section mt-4">
+            <h2>Sistem Özeti</h2>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="stats-number">{{ total_users }}</div>
+                        <div class="stats-label">Kullanıcı Sayısı</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="stats-number">{{ total_cases }}</div>
+                        <div class="stats-label">Toplam Vaka</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="stats-number">{{ total_risk }}</div>
+                        <div class="stats-label">Toplam Risk (TL)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="stats-number">{{ month_cases }}</div>
+                        <div class="stats-label">Bu Ay Eklenen</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

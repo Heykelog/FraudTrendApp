@@ -1,0 +1,10 @@
+{
+    "smtp_sunucu": "smtp.gmail.com",
+    "smtp_port": 587,
+    "kullanici_adi": "heykelog@gmail.com",
+    "gonderen_email": "heykelog@gmail.com",
+    "alici_email": "heykelog@gmail.com",
+    "bildirim_suresi": 3,
+    "bildirim_aktif": true,
+    "sifre": "zflh fqss nirf pygn"
+}

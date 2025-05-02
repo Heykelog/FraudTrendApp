@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vakalar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { 
+            padding: 20px; 
+            background-color: #f8f9fa; 
+        }
+        .content-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .content-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .nav-container {
+            margin-bottom: 20px;
+        }
+        .table-container {
+            overflow-x: auto;
+            max-height: 65vh;
+        }
+        .badge-kanal {
+            padding: 0.5em 0.6em;
+            font-size: 0.75em;
+            font-weight: 600;
+            border-radius: 4px;
+        }
+        .badge-kart {
+            background-color: #4e73df;
+            color: white;
+        }
+        .badge-dijital {
+            background-color: #36b9cc;
+            color: white;
+        }
+        .badge-pos {
+            background-color: #1cc88a;
+            color: white;
+        }
+        .badge-basvuru {
+            background-color: #f6c23e;
+            color: white;
+        }
+        .badge-diger {
+            background-color: #858796;
+            color: white;
+        }
+        .search-box {
+            margin-bottom: 15px;
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+        .money-positive {
+            color: #1cc88a;
+            font-weight: 600;
+        }
+        .money-negative {
+            color: #e74a3b;
+            font-weight: 600;
+        }
+        .money-zero {
+            color: #858796;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigasyon Menüsü -->
+        <div class="nav-container">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light rounded">
+                <div class="container-fluid">
+                    <span class="navbar-brand">Fraud Yönetim Sistemi</span>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('menu') }}"><i class="bi bi-house-door"></i> Ana Sayfa</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('kayit_ekle') }}">Vaka Kayıt</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="{{ url_for('vakalar') }}">Vakalar</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('fraud_trend') }}">Fraud Trend Analizi</a>
+                            </li>
+                            {% if session.get('admin_giris') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin Paneli</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        <a href="{{ url_for('cikis') }}" class="btn btn-outline-danger">Çıkış</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Filtreler -->
+        <div class="content-section">
+            <h2><i class="bi bi-funnel"></i> Vaka Filtreleri</h2>
+            <form method="GET" action="{{ url_for('vakalar') }}">
+                <div class="row g-3">
+                    {% if is_admin %}
+                    <div class="col-md-3">
+                        <label for="kullanici_id" class="form-label">Vakayı Giren Kişi</label>
+                        <select class="form-select" id="kullanici_id" name="kullanici_id">
+                            <option value="">Tümünü Göster</option>
+                            {% for kullanici in kullanicilar %}
+                            <option value="{{ kullanici.id }}" {% if secili_kullanici_id == kullanici.id %}selected{% endif %}>{{ kullanici.ad }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-{% if is_admin %}3{% else %}4{% endif %}">
+                        <label for="kanal" class="form-label">Kanal</label>
+                        <select class="form-select" id="kanal" name="kanal">
+                            <option value="">Tümü</option>
+                            <option value="Kart" {% if secili_kanal == 'Kart' %}selected{% endif %}>Kart</option>
+                            <option value="Dijital Bankacılık" {% if secili_kanal == 'Dijital Bankacılık' %}selected{% endif %}>Dijital Bankacılık</option>
+                            <option value="POS" {% if secili_kanal == 'POS' %}selected{% endif %}>POS</option>
+                            <option value="Başvuru" {% if secili_kanal == 'Başvuru' %}selected{% endif %}>Başvuru</option>
+                            <option value="Diğer" {% if secili_kanal == 'Diğer' %}selected{% endif %}>Diğer</option>
+                        </select>
+                    </div>
+                    <div class="col-md-{% if is_admin %}3{% else %}4{% endif %}">
+                        <label for="ceyrek" class="form-label">Çeyreklik Dönem</label>
+                        <div class="input-group">
+                            <select class="form-select" id="yil_secim_filtre" name="yil_secim">
+                                <option value="">Tüm Yıllar</option>
+                                {% for yil in ceyreklik_donemler.yillar %}
+                                <option value="{{ yil }}" {% if secili_yil == yil|string %}selected{% endif %}>{{ yil }}</option>
+                                {% endfor %}
+                            </select>
+                            <select class="form-select" id="ceyrek_secim_filtre" name="ceyrek_secim">
+                                <option value="">Tüm Çeyrekler</option>
+                                {% for ceyrek in ceyreklik_donemler.ceyrekler %}
+                                <option value="{{ ceyrek }}" {% if secili_ceyrek_kismi == ceyrek %}selected{% endif %}>{{ ceyrek }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-12 d-flex justify-content-between mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-filter"></i> Filtrele
+                        </button>
+                        <div data-bs-toggle="tooltip" data-bs-placement="left" title="Sadece görünen vakalar Excel'e aktarılacaktır">
+                            <a id="excelExportBtn" href="{{ url_for('download_excel', kullanici_id=secili_kullanici_id, kanal=secili_kanal, ceyrek=secili_ceyrek, yil=secili_yil, ceyrek_kismi=secili_ceyrek_kismi) }}" class="btn btn-success">
+                                <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            {% if not is_admin %}
+            <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle"></i> Not: Sadece sizin tarafınızdan girilen vakalar görüntülenmektedir.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Vakalar Tablosu -->
+        <div class="content-section">
+            <h2>
+                <i class="bi bi-table"></i> 
+                {% if not is_admin %}
+                    Sizin Girdiğiniz Vakalar
+                {% elif secili_kullanici_id %}
+                    {% for kullanici in kullanicilar %}
+                        {% if kullanici.id == secili_kullanici_id %}
+                            {{ kullanici.ad }} Tarafından Girilen Vakalar
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    Tüm Vakalar
+                {% endif %}
+                <span class="badge bg-primary rounded-pill">{{ vakalar|length }}</span>
+            </h2>
+            
+            <!-- Arama Kutusu -->
+            <div class="row search-box">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Vakalar içinde ara...">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tablo -->
+            <div class="table-container">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col">Tarih</th>
+                            <th scope="col">Çeyrek</th>
+                            <th scope="col">Vaka Türü</th>
+                            <th scope="col">Kanal</th>
+                            <th scope="col">Toplam Risk (TL)</th>
+                            <th scope="col">Müşteri Zararı</th>
+                            <th scope="col">Banka Zararı</th>
+                            <th scope="col">Kurtarılan Tutar</th>
+                            <th scope="col">Giren Kullanıcı</th>
+                            <th scope="col">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if vakalar and vakalar|length > 0 %}
+                            {% for vaka in vakalar %}
+                            <tr>
+                                <td>{{ vaka['Sahte İşlem / Risk Tespiti Tarihi'] }}</td>
+                                <td>{{ vaka['Çeyreklik Dönem'] }}</td>
+                                <td>{{ vaka['Vaka Türü'] }}</td>
+                                <td>
+                                    <span class="badge badge-kanal
+                                    {% if vaka['Kanal'] == 'Kart' %}badge-kart
+                                    {% elif vaka['Kanal'] == 'Dijital Bankacılık' %}badge-dijital
+                                    {% elif vaka['Kanal'] == 'POS' %}badge-pos
+                                    {% elif vaka['Kanal'] == 'Başvuru' %}badge-basvuru
+                                    {% else %}badge-diger{% endif %}">
+                                    {{ vaka['Kanal'] }}
+                                    </span>
+                                </td>
+                                <td class="{% if vaka['Toplam Risk (TL)']|float > 0 %}money-negative{% else %}money-zero{% endif %}">
+                                    {{ "{:,.2f}".format(vaka['Toplam Risk (TL)']|float) }}
+                                </td>
+                                <td class="{% if vaka['Müşteri Zararı']|float > 0 %}money-negative{% else %}money-zero{% endif %}">
+                                    {{ "{:,.2f}".format(vaka['Müşteri Zararı']|float) }}
+                                </td>
+                                <td class="{% if vaka['Banka Zararı']|float > 0 %}money-negative{% else %}money-zero{% endif %}">
+                                    {{ "{:,.2f}".format(vaka['Banka Zararı']|float) }}
+                                </td>
+                                <td class="{% if vaka['Kurtarılan Tutar']|float > 0 %}money-positive{% else %}money-zero{% endif %}">
+                                    {{ "{:,.2f}".format(vaka['Kurtarılan Tutar']|float) }}
+                                </td>
+                                <td>{{ vaka['Vaka Giren Kişi'] }}</td>
+                                <td>
+                                    <a href="{{ url_for('vaka_detay', vaka_index=loop.index-1) }}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-eye"></i> Detay
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center">Herhangi bir vaka bulunamadı.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Tabloda arama yapabilmek için 
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const excelExportBtn = document.getElementById('excelExportBtn');
+            
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+            
+            searchInput.addEventListener('keyup', function() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const tableRows = document.querySelectorAll('tbody tr');
+                
+                // Update Excel export URL with search term
+                let exportUrl = excelExportBtn.getAttribute('href');
+                if (exportUrl.includes('search_term=')) {
+                    exportUrl = exportUrl.replace(/search_term=[^&]*/, 'search_term=' + encodeURIComponent(searchTerm));
+                } else {
+                    exportUrl += (exportUrl.includes('?') ? '&' : '?') + 'search_term=' + encodeURIComponent(searchTerm);
+                }
+                excelExportBtn.setAttribute('href', exportUrl);
+                
+                // Filter table rows
+                tableRows.forEach(row => {
+                    let found = false;
+                    Array.from(row.cells).forEach(cell => {
+                        if (cell.textContent.toLowerCase().includes(searchTerm)) {
+                            found = true;
+                        }
+                    });
+                    row.style.display = found ? '' : 'none';
+                });
+            });
+            
+            // Yıl ve çeyrek filtrelerini birleştirme
+            const form = document.querySelector('form');
+            const yilSecimFiltre = document.getElementById('yil_secim_filtre');
+            const ceyrekSecimFiltre = document.getElementById('ceyrek_secim_filtre');
+            const ceyrekInput = document.getElementById('ceyrek');
+            
+            form.addEventListener('submit', function(e) {
+                // Prevent the default form submission to handle it manually
+                e.preventDefault();
+                
+                // Create a new FormData object from the form
+                let formData = new FormData(this);
+                
+                // Remove the existing yil, ceyrek_kismi parameters if present
+                formData.delete('yil');
+                formData.delete('ceyrek_kismi');
+                
+                // Eğer her ikisi de seçiliyse, birleştir
+                if (yilSecimFiltre.value && ceyrekSecimFiltre.value) {
+                    formData.set('ceyrek', yilSecimFiltre.value + '-' + ceyrekSecimFiltre.value);
+                }
+                // Sadece yıl seçiliyse
+                else if (yilSecimFiltre.value && !ceyrekSecimFiltre.value) {
+                    formData.delete('ceyrek');
+                    formData.set('yil', yilSecimFiltre.value);
+                }
+                // Sadece çeyrek seçiliyse
+                else if (!yilSecimFiltre.value && ceyrekSecimFiltre.value) {
+                    formData.delete('ceyrek');
+                    formData.set('ceyrek_kismi', ceyrekSecimFiltre.value);
+                }
+                // Hiçbiri seçili değilse
+                else {
+                    formData.delete('ceyrek');
+                }
+                
+                // Convert formData to URL search params
+                const searchParams = new URLSearchParams();
+                for (const [key, value] of formData.entries()) {
+                    if (value) { // Only add parameters with values
+                        searchParams.append(key, value);
+                    }
+                }
+                
+                // Create the new URL and navigate to it
+                const baseUrl = this.action.split('?')[0];
+                const queryString = searchParams.toString();
+                const newUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+                
+                // Navigate to the new URL
+                window.location.href = newUrl;
+            });
+        });
+    </script>
+</body>
+</html> 

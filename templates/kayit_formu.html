@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Vaka Kayıt</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { 
+            padding: 20px; 
+            background-color: #f8f9fa; 
+        }
+        .form-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .son-vaka-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }
+        .son-vaka-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .nav-container {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigasyon Menüsü -->
+        <div class="nav-container">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light rounded">
+                <div class="container-fluid">
+                    <span class="navbar-brand">Fraud Yönetim Sistemi</span>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('menu') }}"><i class="bi bi-house-door"></i> Ana Sayfa</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="{{ url_for('kayit_ekle') }}">Vaka Kayıt</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('vakalar') }}">Vakalar</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('fraud_trend') }}">Fraud Trend Analizi</a>
+                            </li>
+                            {% if session.get('admin_giris') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin Paneli</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        <a href="{{ url_for('cikis') }}" class="btn btn-outline-danger">Çıkış</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+
+        <div class="form-section">
+            <h2 class="mb-4">Yeni Vaka Ekle</h2>
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-section">
+                    <h3>Temel Bilgiler</h3>
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label for="yil_secim" class="form-label">Yıl</label>
+                            <select id="yil_secim" name="yil_secim" class="form-select">
+                                {% for yil in ceyreklik_donemler.yillar %}
+                                <option value="{{ yil }}" {% if yil == ceyreklik_donemler.simdiki_yil %}selected{% endif %}>{{ yil }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="ceyrek_secim" class="form-label">Çeyrek</label>
+                            <select id="ceyrek_secim" name="ceyrek_secim" class="form-select">
+                                {% for ceyrek in ceyreklik_donemler.ceyrekler %}
+                                <option value="{{ ceyrek }}">{{ ceyrek }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <input type="hidden" id="ceyrek_donem" name="ceyrek_donem" value="">
+                        <div class="col-md-3">
+                            <label for="vaka_turu" class="form-label">Vaka Türü</label>
+                            <select id="vaka_turu" name="vaka_turu" class="form-select">
+                                <option value="Sosyal Mühendislik">Sosyal Mühendislik</option>
+                                <option value="Kart kopyalama" selected>Kart kopyalama</option>
+                                <option value="Zararlı Yazılım">Zararlı Yazılım</option>
+                                <option value="Kayıp / Çalıntı Kart">Kayıp / Çalıntı Kart</option>
+                                <option value="Diğer">Diğer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="kanal" class="form-label">Kanal</label>
+                            <select id="kanal" name="kanal" class="form-select">
+                                <option value="">Seçiniz</option>
+                                <option value="Kart">Kart</option>
+                                <option value="Dijital Bankacılık">Dijital Bankacılık</option>
+                                <option value="POS">POS</option>
+                                <option value="Başvuru">Başvuru</option>
+                                <option value="Diğer">Diğer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="islem_turu" class="form-label">İşlem Türü</label>
+                            <select id="islem_turu" name="islem_turu" class="form-select">
+                                <option value="">Seçiniz</option>
+                                <option value="EFT">EFT</option>
+                                <option value="Fast">Fast</option>
+                                <option value="ATM">ATM</option>
+                                <option value="Debit/Kredi Kartı">Debit/Kredi Kartı</option>
+                                <option value="Diğer">Diğer</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Müşteri Bilgileri</h3>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="ad_soyad_uye_isyeri" class="form-label">Ad-Soyad / Üye İş Yeri Adı</label>
+                            <input type="text" class="form-control" id="ad_soyad_uye_isyeri" name="ad_soyad_uye_isyeri">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="musteri_no_tckn_kart_no" class="form-label">Müşteri No / TCKN / Kart No</label>
+                            <input type="text" class="form-control" id="musteri_no_tckn_kart_no" name="musteri_no_tckn_kart_no">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Finansal Bilgiler</h3>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="sahte_islem_risk_tarihi" class="form-label">Sahte İşlem / Risk Tespiti Tarihi</label>
+                            <input type="text" class="form-control" id="sahte_islem_risk_tarihi" name="sahte_islem_risk_tarihi" placeholder="GG/AA/YYYY" pattern="\d{2}/\d{2}/\d{4}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="kullanilan_tutar" class="form-label">Kullanılan Tutar (TL)</label>
+                            <input type="number" class="form-control" id="kullanilan_tutar" name="kullanilan_tutar" step="0.01">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="musteri_zarari" class="form-label">Müşteri Zararı (TL)</label>
+                            <input type="number" class="form-control" id="musteri_zarari" name="musteri_zarari" step="0.01" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="banka_zarari" class="form-label">Banka Zararı (TL)</label>
+                            <input type="number" class="form-control" id="banka_zarari" name="banka_zarari" step="0.01" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="kurtarilan_tutar" class="form-label">Kurtarılan Tutar (TL)</label>
+                            <input type="number" class="form-control" id="kurtarilan_tutar" name="kurtarilan_tutar" step="0.01" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="toplam_risk" class="form-label">Toplam Risk (TL)</label>
+                            <input type="number" class="form-control" id="toplam_risk" name="toplam_risk" step="0.01" readonly>
+                            <small class="text-muted">Toplam risk otomatik hesaplanacaktır.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="kart_ozel_alanlar" style="display: none;" class="form-section">
+                    <h3>Kart Özel Bilgileri</h3>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="cpp_tespiti" class="form-label">CPP Tespiti</label>
+                            <select id="cpp_tespiti" name="cpp_tespiti" class="form-select">
+                                <option value="">Seçiniz</option>
+                                <option value="Var">Var</option>
+                                <option value="Yok">Yok</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="pos_atm" class="form-label">Pos/ATM</label>
+                            <select id="pos_atm" name="pos_atm" class="form-select">
+                                <option value="">Seçiniz</option>
+                                <option value="ATM">ATM</option>
+                                <option value="Pos">Pos</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="kopyalama_onus_not_onus" class="form-label">Kopyalama Onus/Not Onus</label>
+                            <select id="kopyalama_onus_not_onus" name="kopyalama_onus_not_onus" class="form-select">
+                                <option value="">Seçiniz</option>
+                                <option value="Onus">Onus</option>
+                                <option value="Not Onus">Not Onus</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="kopyalama_yeri_supheli_isyeri" class="form-label">Kopyalama Yeri/ Şüpheli İş yeri</label>
+                            <input type="text" class="form-control" id="kopyalama_yeri_supheli_isyeri" name="kopyalama_yeri_supheli_isyeri">
+                        </div>
+                        <div class="col-12">
+                            <label for="atm_kart_kopyalama_yontemi" class="form-label">ATM Kart Kopyalama Yöntemi</label>
+                            <input type="text" class="form-control" id="atm_kart_kopyalama_yontemi" name="atm_kart_kopyalama_yontemi">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Ek Bilgiler</h3>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="vaka_detayi" class="form-label">Vaka Detayı</label>
+                            <textarea class="form-control" id="vaka_detayi" name="vaka_detayi" rows="5"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="analist_notu" class="form-label">Analist Notu</label>
+                            <textarea class="form-control" id="analist_notu" name="analist_notu" rows="5"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Sorumlu Kişiler</h3>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="vaka_giren_kisi" class="form-label">Vakayı Giren Kişi <span class="text-danger">*</span></label>
+                            <select id="vaka_giren_kisi" name="vaka_giren_kisi" class="form-select" required disabled>
+                                {% for kullanici in kullanicilar %}
+                                <option value="{{ kullanici.id }}" {% if kullanici.id == session.get('son_secilen_kullanici_id') %}selected{% endif %}>{{ kullanici.ad }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="hidden" name="vaka_giren_kisi" value="{{ session.get('son_secilen_kullanici_id') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inceleyen_kisi" class="form-label">İşlemi İnceleyen Kişi <span class="text-danger">*</span></label>
+                            <select id="inceleyen_kisi" name="inceleyen_kisi" class="form-select" required>
+                                <option value="">Seçiniz</option>
+                                <option value="Mi4biz">Mi4biz</option>
+                                <option value="Şube">Şube</option>
+                                <option value="Diğer">Diğer</option>
+                                {% for kullanici in kullanicilar %}
+                                <option value="{{ kullanici.id }}">{{ kullanici.ad }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+
+        {% if son_vaka %}
+        <div class="son-vaka-section">
+            <h3>Son Eklenen Vaka</h3>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Çeyreklik Dönem</th>
+                            <th>Vaka Türü</th>
+                            <th>Kanal</th>
+                            <th>Ad-Soyad / Üye İş Yeri Adı</th>
+                            <th>İşlem Türü</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{ son_vaka['Çeyreklik Dönem'] }}</td>
+                            <td>{{ son_vaka['Vaka Türü'] }}</td>
+                            <td>{{ son_vaka['Kanal'] }}</td>
+                            <td>{{ son_vaka['Ad-Soyad / Üye İş Yeri Adı'] }}</td>
+                            <td>{{ son_vaka['İşlem Türü'] }}</td>
+                            <td>
+                                <a href="{{ url_for('duzenle_son_vaka') }}" class="btn btn-sm btn-primary">Düzenle</a>
+                                <a href="{{ url_for('sil_son_vaka') }}" class="btn btn-sm btn-danger sil-link">Sil</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Kart seçildiğinde özel alanları göster/gizle
+            document.getElementById('kanal').addEventListener('change', function() {
+                var kartOzelAlanlar = document.getElementById('kart_ozel_alanlar');
+                if (this.value === 'Kart') {
+                    kartOzelAlanlar.style.display = 'block';
+                } else {
+                    kartOzelAlanlar.style.display = 'none';
+                }
+            });
+            
+            // Toplam risk hesaplama
+            var musteriZarariInput = document.getElementById('musteri_zarari');
+            var bankaZarariInput = document.getElementById('banka_zarari');
+            var kurtarilanTutarInput = document.getElementById('kurtarilan_tutar');
+            var toplamRiskInput = document.getElementById('toplam_risk');
+            
+            function hesaplaToplamRisk() {
+                var musteriZarari = parseFloat(musteriZarariInput.value) || 0;
+                var bankaZarari = parseFloat(bankaZarariInput.value) || 0;
+                var kurtarilanTutar = parseFloat(kurtarilanTutarInput.value) || 0;
+                var toplamRisk = musteriZarari + bankaZarari + kurtarilanTutar;
+                toplamRiskInput.value = toplamRisk;
+            }
+            
+            musteriZarariInput.addEventListener('input', hesaplaToplamRisk);
+            bankaZarariInput.addEventListener('input', hesaplaToplamRisk);
+            kurtarilanTutarInput.addEventListener('input', hesaplaToplamRisk);
+            
+            // Yıl ve çeyrek birleştirme
+            var formElement = document.querySelector('form');
+            var yilSecimElement = document.getElementById('yil_secim');
+            var ceyrekSecimElement = document.getElementById('ceyrek_secim');
+            var ceyrekDonemElement = document.getElementById('ceyrek_donem');
+            
+            formElement.addEventListener('submit', function(e) {
+                var yil = yilSecimElement.value;
+                var ceyrek = ceyrekSecimElement.value;
+                ceyrekDonemElement.value = yil + '-' + ceyrek;
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İnceleyen Kişi Raporu</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { 
+            padding: 20px; 
+            background-color: #f8f9fa; 
+        }
+        .content-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .content-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .nav-container {
+            margin-bottom: 20px;
+        }
+        .card {
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .stats-card {
+            text-align: center;
+            padding: 20px;
+        }
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .admin-badge {
+            background-color: #dc3545;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            margin-left: 10px;
+            font-size: 0.8rem;
+        }
+        .money-positive {
+            color: #1cc88a;
+            font-weight: 600;
+        }
+        .money-negative {
+            color: #e74a3b;
+            font-weight: 600;
+        }
+        .money-zero {
+            color: #858796;
+        }
+        .badge-kanal {
+            padding: 0.5em 0.6em;
+            font-size: 0.75em;
+            font-weight: 600;
+            border-radius: 4px;
+        }
+        .badge-kart {
+            background-color: #4e73df;
+            color: white;
+        }
+        .badge-dijital {
+            background-color: #36b9cc;
+            color: white;
+        }
+        .badge-pos {
+            background-color: #1cc88a;
+            color: white;
+        }
+        .badge-basvuru {
+            background-color: #f6c23e;
+            color: white;
+        }
+        .badge-diger {
+            background-color: #858796;
+            color: white;
+        }
+        .table-container {
+            overflow-x: auto;
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigasyon Menüsü -->
+        <div class="nav-container">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light rounded">
+                <div class="container-fluid">
+                    <span class="navbar-brand">Fraud Yönetim Sistemi <span class="admin-badge">Admin</span></span>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_panel') }}"><i class="bi bi-house-door"></i> Ana Sayfa</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('kayit_ekle') }}">Vaka Kayıt</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('vakalar') }}">Vakalar</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('fraud_trend') }}">Fraud Trend Analizi</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin Paneli</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="{{ url_for('inceleyenler_raporu') }}">İnceleyen Raporu</a>
+                            </li>
+                        </ul>
+                        <a href="{{ url_for('cikis') }}" class="btn btn-outline-danger">Çıkış</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Ana Başlık -->
+        <div class="content-section">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>İnceleyen Kişi Raporu</h2>
+                <form method="GET" action="{{ url_for('inceleyenler_raporu') }}" class="d-flex">
+                    <select class="form-select me-2" name="inceleyen" onchange="this.form.submit()">
+                        {% for inceleyen in inceleyenler %}
+                        <option value="{{ inceleyen }}" {% if secili_inceleyen == inceleyen %}selected{% endif %}>{{ inceleyen }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+            <p class="lead">
+                <strong>{{ secili_inceleyen }}</strong> tarafından incelenen vakaların istatistiksel özeti
+            </p>
+        </div>
+
+        {% if secili_inceleyen and secili_inceleyen in istatistikler %}
+        {% set stats = istatistikler[secili_inceleyen] %}
+        <!-- İstatistik Kartları -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="stats-number">{{ stats.toplam_vaka }}</div>
+                    <div class="stats-label">Toplam İncelenen Vaka</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="stats-number">{{ stats.musteri_zararli_vaka }}</div>
+                    <div class="stats-label">Müşteri Zararlı Vaka</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="stats-number">{{ stats.banka_zararli_vaka }}</div>
+                    <div class="stats-label">Banka Zararlı Vaka</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="stats-number money-negative">{{ '{:,.2f}'.format(stats.toplam_risk) }}</div>
+                    <div class="stats-label">Toplam Risk (TL)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Müşteri Zararı</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <h3 class="money-negative">{{ '{:,.2f}'.format(stats.toplam_musteri_zarari) }} TL</h3>
+                        <p class="card-text">Toplam müşteri zararı tutarı</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Banka Zararı</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <h3 class="money-negative">{{ '{:,.2f}'.format(stats.toplam_banka_zarari) }} TL</h3>
+                        <p class="card-text">Toplam banka zararı tutarı</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Kurtarılan Tutar</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <h3 class="money-positive">{{ '{:,.2f}'.format(stats.toplam_kurtarilan) }} TL</h3>
+                        <p class="card-text">Toplam kurtarılan tutar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Kanal Dağılımı</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group">
+                            {% for kanal, sayi in stats.kanal_dagilimi.items() %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    <span class="badge badge-kanal
+                                    {% if kanal == 'Kart' %}badge-kart
+                                    {% elif kanal == 'Dijital Bankacılık' %}badge-dijital
+                                    {% elif kanal == 'POS' %}badge-pos
+                                    {% elif kanal == 'Başvuru' %}badge-basvuru
+                                    {% else %}badge-diger{% endif %}">
+                                    {{ kanal }}
+                                    </span>
+                                </span>
+                                <span class="badge bg-primary rounded-pill">{{ sayi }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Çeyreklik Dağılım</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group">
+                            {% for ceyrek, sayi in stats.ceyrek_dagilimi.items() %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ ceyrek }}
+                                <span class="badge bg-primary rounded-pill">{{ sayi }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vakalar Tablosu -->
+        <div class="content-section mt-4">
+            <h2>
+                <i class="bi bi-table"></i> {{ secili_inceleyen }} Tarafından İncelenen Vakalar
+                <span class="badge bg-primary rounded-pill">{{ stats.toplam_vaka }}</span>
+            </h2>
+            
+            <!-- Tablo -->
+            <div class="table-container">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col">Tarih</th>
+                            <th scope="col">Çeyrek</th>
+                            <th scope="col">Vaka Türü</th>
+                            <th scope="col">Kanal</th>
+                            <th scope="col">Toplam Risk (TL)</th>
+                            <th scope="col">Müşteri Zararı</th>
+                            <th scope="col">Banka Zararı</th>
+                            <th scope="col">Kurtarılan Tutar</th>
+                            <th scope="col">Giren Kişi</th>
+                            <th scope="col">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if secili_vakalar and secili_vakalar|length > 0 %}
+                            {% for vaka in secili_vakalar %}
+                            <tr>
+                                <td>{{ vaka['Sahte İşlem / Risk Tespiti Tarihi'] }}</td>
+                                <td>{{ vaka['Çeyreklik Dönem'] }}</td>
+                                <td>{{ vaka['Vaka Türü'] }}</td>
+                                <td>
+                                    <span class="badge badge-kanal
+                                    {% if vaka['Kanal'] == 'Kart' %}badge-kart
+                                    {% elif vaka['Kanal'] == 'Dijital Bankacılık' %}badge-dijital
+                                    {% elif vaka['Kanal'] == 'POS' %}badge-pos
+                                    {% elif vaka['Kanal'] == 'Başvuru' %}badge-basvuru
+                                    {% else %}badge-diger{% endif %}">
+                                    {{ vaka['Kanal'] }}
+                                    </span>
+                                </td>
+                                <td class="{% if vaka['Toplam Risk (TL)']|float > 0 %}money-negative{% else %}money-zero{% endif %}">
+                                    {{ "{:,.2f}".format(vaka['Toplam Risk (TL)']|float) }}
+                                </td>
+                                <td class="{% if vaka['Müşteri Zararı']|float > 0 %}money-negative{% else %}money-zero{% endif %}">
+                                    {{ "{:,.2f}".format(vaka['Müşteri Zararı']|float) }}
+                                </td>
+                                <td class="{% if vaka['Banka Zararı']|float > 0 %}money-negative{% else %}money-zero{% endif %}">
+                                    {{ "{:,.2f}".format(vaka['Banka Zararı']|float) }}
+                                </td>
+                                <td class="{% if vaka['Kurtarılan Tutar']|float > 0 %}money-positive{% else %}money-zero{% endif %}">
+                                    {{ "{:,.2f}".format(vaka['Kurtarılan Tutar']|float) }}
+                                </td>
+                                <td>{{ vaka['Vaka Giren Kişi'] }}</td>
+                                <td>
+                                    <a href="{{ url_for('vaka_detay', vaka_index=loop.index-1) }}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-eye"></i> Detay
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="10" class="text-center">Herhangi bir vaka bulunamadı.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> İnceleyen kişi seçilmedi veya hiç vaka incelememiş.
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

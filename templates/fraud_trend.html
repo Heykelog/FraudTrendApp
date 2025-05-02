@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Trend Analizi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Excel dışa aktarım için gerekli kütüphane -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- PDF Kütüphaneleri Eklendi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .data-table {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .nav-pills .nav-link.active {
+            background-color: #2c3e50;
+        }
+        .table-header {
+            background-color: #2c3e50;
+            color: white;
+        }
+        .table-sum {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        th, td {
+            vertical-align: middle;
+            text-align: center;
+        }
+        td:first-child {
+            text-align: left;
+        }
+        .export-buttons {
+            margin-bottom: 15px;
+        }
+        .table-bordered {
+            border-collapse: collapse;
+        }
+        .table-bordered th, .table-bordered td {
+            border: 1px solid #dee2e6;
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(0,0,0,.05);
+        }
+        .zero-value {
+            color: #ccc;
+        }
+        .non-zero-value {
+            font-weight: 500;
+        }
+        .quarter-header {
+            background-color: #2c3e50;
+            color: white;
+        }
+        .quarter-group {
+            background-color: #f5f5f5;
+        }
+        .total-header {
+            background-color: #2c3e50;
+            color: white;
+        }
+        
+        /* Yeni çeyrek stilleri */
+        .q1-header {
+            background-color: #4682b4; /* Q1 için mavi ton */
+            color: white;
+        }
+        .q2-header {
+            background-color: #2e8b57; /* Q2 için yeşil ton */
+            color: white;
+        }
+        .q3-header {
+            background-color: #cd853f; /* Q3 için turuncu ton */
+            color: white;
+        }
+        .q4-header {
+            background-color: #dc143c; /* Q4 için kırmızı ton */
+            color: white;
+        }
+        .total-col-header {
+            background-color: #2f4f4f; /* Toplam için koyu gri-mavi */
+            color: white;
+        }
+        .quarter-box {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 0;
+            margin: 0 3px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            overflow: hidden;
+            min-width: 240px;
+        }
+        .table-container {
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+        .quarter-title {
+            text-align: center;
+            font-weight: bold;
+            padding: 8px;
+            color: white;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .quarter-content td {
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .channel-col {
+            width: 150px;
+            min-width: 150px;
+            background-color: #f8f9fa;
+            font-weight: bold;
+            border-right: 1px solid #e0e0e0;
+        }
+        .total-row {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        table.quarter-table {
+            margin-bottom: 0;
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        table.quarter-table th {
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 6px 4px;
+            width: 25%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        table.quarter-table td {
+            width: 25%;
+            padding: 8px 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .table-bordered {
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h1 class="h3">Fraud Trend Analizi - {{ year_label }}</h1>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="export-buttons">
+                    <!-- Yıl Seçim Dropdown'ı -->
+                    <form method="GET" action="{{ url_for('fraud_trend') }}" class="d-inline-block me-2">
+                        <select id="yearSelector" class="form-select form-select-sm d-inline-block" style="width: auto;" name="selected_year" onchange="this.form.submit()">
+                            {% for year in available_years %}
+                            <option value="{{ year }}" {% if selected_year == year|string %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    
+                    <button class="btn btn-success" onclick="exportToExcel()">
+                        <i class="bi bi-file-excel"></i> Excel'e Aktar
+                    </button>
+                    <!-- PDF Butonu Eklendi -->
+                    <button class="btn btn-danger" onclick="exportToPDF()">
+                        <i class="bi bi-file-pdf"></i> PDF'e Aktar
+                    </button>
+                    <a href="{{ url_for('menu') }}" class="btn btn-primary">
+                        <i class="bi bi-house"></i> Anasayfaya Dön
+                    </a>
+                </div>
+                <a href="{{ url_for('kayit_ekle') }}" class="btn btn-primary">Kayıt Ekle</a>
+                <a href="{{ url_for('cikis') }}" class="btn btn-outline-danger">Çıkış</a>
+            </div>
+        </div>
+
+        <!-- Grafikler -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="chart-container">
+                    <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pills-risk-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#pills-risk" type="button" role="tab">Toplam Risk</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-musteri-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#pills-musteri" type="button" role="tab">Müşteri Zararı</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-banka-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#pills-banka" type="button" role="tab">Banka Zararı</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-kurtarilan-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#pills-kurtarilan" type="button" role="tab">Kurtarılan Tutar</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="pills-tabContent">
+                        <div class="tab-pane fade show active" id="pills-risk" role="tabpanel">
+                            <canvas id="riskChart"></canvas>
+                        </div>
+                        <div class="tab-pane fade" id="pills-musteri" role="tabpanel">
+                            <canvas id="musteriChart"></canvas>
+                        </div>
+                        <div class="tab-pane fade" id="pills-banka" role="tabpanel">
+                            <canvas id="bankaChart"></canvas>
+                        </div>
+                        <div class="tab-pane fade" id="pills-kurtarilan" role="tabpanel">
+                            <canvas id="kurtarilanChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tutar Bilgileri Tablosu -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="data-table">
+                    <h3 class="mb-3">{{ year_label }} Kanal Bazlı Tutar Analizi (₺)</h3>
+                    <div class="table-container">
+                        <table class="table table-bordered" id="tutarTable">
+                            <thead>
+                                <tr>
+                                    <th class="channel-col">Kanal</th>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th colspan="4" class="quarter-title q1-header">{{ quarter_ids[0] }}</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Risk</th>
+                                                        <th>Müşteri Zararı</th>
+                                                        <th>Banka Zararı</th>
+                                                        <th>Kurtarılan</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th colspan="4" class="quarter-title q2-header">{{ quarter_ids[1] }}</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Risk</th>
+                                                        <th>Müşteri Zararı</th>
+                                                        <th>Banka Zararı</th>
+                                                        <th>Kurtarılan</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th colspan="4" class="quarter-title q3-header">{{ quarter_ids[2] }}</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Risk</th>
+                                                        <th>Müşteri Zararı</th>
+                                                        <th>Banka Zararı</th>
+                                                        <th>Kurtarılan</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th colspan="4" class="quarter-title q4-header">{{ quarter_ids[3] }}</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Risk</th>
+                                                        <th>Müşteri Zararı</th>
+                                                        <th>Banka Zararı</th>
+                                                        <th>Kurtarılan</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th colspan="4" class="quarter-title total-col-header">TOPLAM {{ year_label }}</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Risk</th>
+                                                        <th>Müşteri Zararı</th>
+                                                        <th>Banka Zararı</th>
+                                                        <th>Kurtarılan</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for channel in ['Dijital Bankacılık', 'Kart', 'POS', 'Başvuru'] %}
+                                <tr>
+                                    <td class="channel-col">{{ channel }}</td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[0]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[0]]['Risk'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[0]]['Risk']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[0]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[0]]['Müşteri'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[0]]['Müşteri']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[0]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[0]]['Banka'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[0]]['Banka']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[0]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[0]]['Kurtarılan'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[0]]['Kurtarılan']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[1]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[1]]['Risk'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[1]]['Risk']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[1]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[1]]['Müşteri'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[1]]['Müşteri']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[1]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[1]]['Banka'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[1]]['Banka']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[1]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[1]]['Kurtarılan'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[1]]['Kurtarılan']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[2]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[2]]['Risk'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[2]]['Risk']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[2]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[2]]['Müşteri'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[2]]['Müşteri']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[2]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[2]]['Banka'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[2]]['Banka']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[2]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[2]]['Kurtarılan'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[2]]['Kurtarılan']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[3]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[3]]['Risk'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[3]]['Risk']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[3]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[3]]['Müşteri'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[3]]['Müşteri']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[3]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[3]]['Banka'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[3]]['Banka']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel][quarter_ids[3]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel][quarter_ids[3]]['Kurtarılan'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel][quarter_ids[3]]['Kurtarılan']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if tutar_data[channel]['Toplam']['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel]['Toplam']['Risk'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel]['Toplam']['Risk']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel]['Toplam']['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel]['Toplam']['Müşteri'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel]['Toplam']['Müşteri']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel]['Toplam']['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel]['Toplam']['Banka'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel]['Toplam']['Banka']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data[channel]['Toplam']['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data[channel]['Toplam']['Kurtarılan'] > 0 %}{{ "{:,.2f}".format(tutar_data[channel]['Toplam']['Kurtarılan']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="total-row">
+                                    <td class="channel-col">TOPLAM</td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[0]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[0]]['Risk'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[0]]['Risk']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[0]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[0]]['Müşteri'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[0]]['Müşteri']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[0]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[0]]['Banka'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[0]]['Banka']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[0]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[0]]['Kurtarılan'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[0]]['Kurtarılan']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[1]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[1]]['Risk'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[1]]['Risk']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[1]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[1]]['Müşteri'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[1]]['Müşteri']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[1]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[1]]['Banka'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[1]]['Banka']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[1]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[1]]['Kurtarılan'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[1]]['Kurtarılan']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[2]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[2]]['Risk'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[2]]['Risk']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[2]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[2]]['Müşteri'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[2]]['Müşteri']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[2]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[2]]['Banka'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[2]]['Banka']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[2]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[2]]['Kurtarılan'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[2]]['Kurtarılan']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[3]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[3]]['Risk'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[3]]['Risk']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[3]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[3]]['Müşteri'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[3]]['Müşteri']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[3]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[3]]['Banka'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[3]]['Banka']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if tutar_data['Toplam'][quarter_ids[3]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if tutar_data['Toplam'][quarter_ids[3]]['Kurtarılan'] > 0 %}{{ "{:,.2f}".format(tutar_data['Toplam'][quarter_ids[3]]['Kurtarılan']) }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="non-zero-value">{{ "{:,.2f}".format(tutar_data['Toplam']['Toplam']['Risk']) }}</td>
+                                                        <td class="non-zero-value">{{ "{:,.2f}".format(tutar_data['Toplam']['Toplam']['Müşteri']) }}</td>
+                                                        <td class="non-zero-value">{{ "{:,.2f}".format(tutar_data['Toplam']['Toplam']['Banka']) }}</td>
+                                                        <td class="non-zero-value">{{ "{:,.2f}".format(tutar_data['Toplam']['Toplam']['Kurtarılan']) }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adet Bilgileri Tablosu -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="data-table">
+                    <h3 class="mb-3">{{ year_label }} Kanal Bazlı Adet Analizi</h3>
+                    <div class="table-container">
+                        <table class="table table-bordered" id="adetTable">
+                            <thead>
+                                <tr>
+                                    <th class="channel-col">Kanal</th>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th colspan="4" class="quarter-title q1-header">{{ quarter_ids[0] }}</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Risk</th>
+                                                        <th>Müşteri Zararı</th>
+                                                        <th>Banka Zararı</th>
+                                                        <th>Kurtarılan</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th colspan="4" class="quarter-title q2-header">{{ quarter_ids[1] }}</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Risk</th>
+                                                        <th>Müşteri Zararı</th>
+                                                        <th>Banka Zararı</th>
+                                                        <th>Kurtarılan</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th colspan="4" class="quarter-title q3-header">{{ quarter_ids[2] }}</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Risk</th>
+                                                        <th>Müşteri Zararı</th>
+                                                        <th>Banka Zararı</th>
+                                                        <th>Kurtarılan</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th colspan="4" class="quarter-title q4-header">{{ quarter_ids[3] }}</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Risk</th>
+                                                        <th>Müşteri Zararı</th>
+                                                        <th>Banka Zararı</th>
+                                                        <th>Kurtarılan</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th colspan="4" class="quarter-title total-col-header">TOPLAM {{ year_label }}</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Risk</th>
+                                                        <th>Müşteri Zararı</th>
+                                                        <th>Banka Zararı</th>
+                                                        <th>Kurtarılan</th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for channel in ['Dijital Bankacılık', 'Kart', 'POS', 'Başvuru'] %}
+                                <tr>
+                                    <td class="channel-col">{{ channel }}</td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if adet_data[channel][quarter_ids[0]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[0]]['Risk'] > 0 %}{{ adet_data[channel][quarter_ids[0]]['Risk'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[0]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[0]]['Müşteri'] > 0 %}{{ adet_data[channel][quarter_ids[0]]['Müşteri'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[0]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[0]]['Banka'] > 0 %}{{ adet_data[channel][quarter_ids[0]]['Banka'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[0]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[0]]['Kurtarılan'] > 0 %}{{ adet_data[channel][quarter_ids[0]]['Kurtarılan'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if adet_data[channel][quarter_ids[1]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[1]]['Risk'] > 0 %}{{ adet_data[channel][quarter_ids[1]]['Risk'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[1]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[1]]['Müşteri'] > 0 %}{{ adet_data[channel][quarter_ids[1]]['Müşteri'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[1]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[1]]['Banka'] > 0 %}{{ adet_data[channel][quarter_ids[1]]['Banka'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[1]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[1]]['Kurtarılan'] > 0 %}{{ adet_data[channel][quarter_ids[1]]['Kurtarılan'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if adet_data[channel][quarter_ids[2]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[2]]['Risk'] > 0 %}{{ adet_data[channel][quarter_ids[2]]['Risk'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[2]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[2]]['Müşteri'] > 0 %}{{ adet_data[channel][quarter_ids[2]]['Müşteri'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[2]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[2]]['Banka'] > 0 %}{{ adet_data[channel][quarter_ids[2]]['Banka'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[2]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[2]]['Kurtarılan'] > 0 %}{{ adet_data[channel][quarter_ids[2]]['Kurtarılan'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if adet_data[channel][quarter_ids[3]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[3]]['Risk'] > 0 %}{{ adet_data[channel][quarter_ids[3]]['Risk'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[3]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[3]]['Müşteri'] > 0 %}{{ adet_data[channel][quarter_ids[3]]['Müşteri'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[3]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[3]]['Banka'] > 0 %}{{ adet_data[channel][quarter_ids[3]]['Banka'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel][quarter_ids[3]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel][quarter_ids[3]]['Kurtarılan'] > 0 %}{{ adet_data[channel][quarter_ids[3]]['Kurtarılan'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if adet_data[channel]['Toplam']['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel]['Toplam']['Risk'] > 0 %}{{ adet_data[channel]['Toplam']['Risk'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel]['Toplam']['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel]['Toplam']['Müşteri'] > 0 %}{{ adet_data[channel]['Toplam']['Müşteri'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel]['Toplam']['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel]['Toplam']['Banka'] > 0 %}{{ adet_data[channel]['Toplam']['Banka'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data[channel]['Toplam']['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data[channel]['Toplam']['Kurtarılan'] > 0 %}{{ adet_data[channel]['Toplam']['Kurtarılan'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="total-row">
+                                    <td class="channel-col">TOPLAM</td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[0]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[0]]['Risk'] > 0 %}{{ adet_data['Toplam'][quarter_ids[0]]['Risk'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[0]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[0]]['Müşteri'] > 0 %}{{ adet_data['Toplam'][quarter_ids[0]]['Müşteri'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[0]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[0]]['Banka'] > 0 %}{{ adet_data['Toplam'][quarter_ids[0]]['Banka'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[0]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[0]]['Kurtarılan'] > 0 %}{{ adet_data['Toplam'][quarter_ids[0]]['Kurtarılan'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[1]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[1]]['Risk'] > 0 %}{{ adet_data['Toplam'][quarter_ids[1]]['Risk'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[1]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[1]]['Müşteri'] > 0 %}{{ adet_data['Toplam'][quarter_ids[1]]['Müşteri'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[1]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[1]]['Banka'] > 0 %}{{ adet_data['Toplam'][quarter_ids[1]]['Banka'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[1]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[1]]['Kurtarılan'] > 0 %}{{ adet_data['Toplam'][quarter_ids[1]]['Kurtarılan'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[2]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[2]]['Risk'] > 0 %}{{ adet_data['Toplam'][quarter_ids[2]]['Risk'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[2]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[2]]['Müşteri'] > 0 %}{{ adet_data['Toplam'][quarter_ids[2]]['Müşteri'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[2]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[2]]['Banka'] > 0 %}{{ adet_data['Toplam'][quarter_ids[2]]['Banka'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[2]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[2]]['Kurtarılan'] > 0 %}{{ adet_data['Toplam'][quarter_ids[2]]['Kurtarılan'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[3]]['Risk'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[3]]['Risk'] > 0 %}{{ adet_data['Toplam'][quarter_ids[3]]['Risk'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[3]]['Müşteri'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[3]]['Müşteri'] > 0 %}{{ adet_data['Toplam'][quarter_ids[3]]['Müşteri'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[3]]['Banka'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[3]]['Banka'] > 0 %}{{ adet_data['Toplam'][quarter_ids[3]]['Banka'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                        <td class="{% if adet_data['Toplam'][quarter_ids[3]]['Kurtarılan'] == 0 %}zero-value{% else %}non-zero-value{% endif %}">
+                                                            {% if adet_data['Toplam'][quarter_ids[3]]['Kurtarılan'] > 0 %}{{ adet_data['Toplam'][quarter_ids[3]]['Kurtarılan'] }}{% else %}-{% endif %}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                    <td class="p-0">
+                                        <div class="quarter-box">
+                                            <table class="table quarter-table">
+                                                <tbody class="quarter-content">
+                                                    <tr>
+                                                        <td class="non-zero-value">{{ adet_data['Toplam']['Toplam']['Risk'] }}</td>
+                                                        <td class="non-zero-value">{{ adet_data['Toplam']['Toplam']['Müşteri'] }}</td>
+                                                        <td class="non-zero-value">{{ adet_data['Toplam']['Toplam']['Banka'] }}</td>
+                                                        <td class="non-zero-value">{{ adet_data['Toplam']['Toplam']['Kurtarılan'] }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Özet Kartlar -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h5>Toplam Risk</h5>
+                    <h2 id="totalRisk">{{ "{:,.2f}".format(total_risk) }} ₺</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h5>Müşteri Zararı</h5>
+                    <h2 id="totalCustomerLoss">{{ "{:,.2f}".format(musteri_zarari) }} ₺</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h5>Banka Zararı</h5>
+                    <h2 id="totalBankLoss">{{ "{:,.2f}".format(banka_zarari) }} ₺</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h5>Kurtarılan Tutar</h5>
+                    <h2 id="totalSaved">{{ "{:,.2f}".format(kurtarilan) }} ₺</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Chart verilerini Python'dan al
+            const chartData = {{ chart_data|tojson|safe }};
+            
+            // Grafik renkleri
+            const colors = {
+                'Dijital Bankacılık': 'rgba(54, 162, 235, 0.7)',
+                'Kart': 'rgba(255, 99, 132, 0.7)',
+                'POS': 'rgba(75, 192, 192, 0.7)',
+                'Başvuru': 'rgba(153, 102, 255, 0.7)'
+            };
+            
+            // Gafikleri oluşturacak fonksiyon
+            function createChart(canvasId, data, label) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return null;
+                
+                const ctx = canvas.getContext('2d');
+                
+                return new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: {{ quarter_labels|tojson|safe }},
+                        datasets: Object.keys(colors).map(channel => ({
+                            label: channel,
+                            data: data[channel],
+                            backgroundColor: colors[channel],
+                            borderColor: colors[channel].replace('0.7', '1'),
+                            borderWidth: 1
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: true,
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Tutar (₺)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: label
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let value = context.raw;
+                                        if (typeof value === 'number') {
+                                            value = value.toLocaleString('tr-TR', {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2
+                                            });
+                                        }
+                                        return context.dataset.label + ': ' + value + ' ₺';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Grafikleri oluştur
+            createChart('riskChart', chartData.risk, 'Toplam Risk Trendi');
+            createChart('musteriChart', chartData.musteri, 'Müşteri Zararı Trendi');
+            createChart('bankaChart', chartData.banka, 'Banka Zararı Trendi');
+            createChart('kurtarilanChart', chartData.kurtarilan, 'Kurtarılan Tutar Trendi');
+            
+            // Excel fonksiyonu
+            window.exportToExcel = function() {
+                try {
+                    // Seçili yılı al
+                    const selectedYear = document.getElementById('yearSelector').value;
+                    
+                    // Doğrudan sunucudan Excel'i indir
+                    window.location.href = `/fraud_trend_excel/${selectedYear}`;
+                } catch (error) {
+                    console.error("Excel dışa aktarma hatası:", error);
+                    alert("Excel dışa aktarma sırasında bir hata oluştu: " + error.message);
+                }
+            };
+            
+            // PDF dosyasına aktarma fonksiyonu
+            window.exportToPDF = function() {
+                try {
+                    console.log("PDF export started");
+                    
+                    // Seçili yılı al
+                    const selectedYear = document.getElementById('yearSelector').value;
+                    
+                    // jsPDF ve jspdf-autotable kütüphanelerini kullan
+                    const { jsPDF } = window.jspdf;
+                    
+                    // A4 boyutunda yatay (landscape) PDF oluştur
+                    const doc = new jsPDF({
+                        orientation: 'landscape',
+                        unit: 'mm',
+                        format: 'a4'
+                    });
+                    
+                    // Arial-Unicode-MS fontunu ekle (Türkçe karakterleri destekleyen font)
+                    // Not: Font gömülü olmadığı için sistem fontunu kullanacak
+                    doc.setFont("helvetica");
+                    
+                    // Alternatif yaklaşım: Özel text render fonksiyonu
+                    // Türkçe karakterleri düzenlemek için
+                    const turkishMap = {
+                        'ı': 'i', 'İ': 'I', 'ş': 's', 'Ş': 'S', 
+                        'ğ': 'g', 'Ğ': 'G', 'ü': 'u', 'Ü': 'U',
+                        'ö': 'o', 'Ö': 'O', 'ç': 'c', 'Ç': 'C'
+                    };
+                    
+                    // Türkçe metni düzeltme fonksiyonu
+                    function fixTurkishText(text) {
+                        // İngilizce karakter karşılıklarıyla değiştir
+                        return String(text).replace(/[ıİşŞğĞüÜöÖçÇ]/g, match => turkishMap[match] || match);
+                    }
+                    
+                    // PDF başlığı ekle
+                    doc.setFontSize(14);
+                    doc.setTextColor(0, 0, 0); // Siyah renk
+                    doc.text(`${selectedYear} Kanal Bazli Tutar Analizi (TL)`, 150, 15, { align: "center" });
+                    
+                    // Tutar tablosunu ekle
+                    addTableToPDF(doc, document.getElementById('tutarTable'), 25, fixTurkishText, selectedYear);
+                    
+                    // Yeni sayfa ekle
+                    doc.addPage();
+                    doc.text(`${selectedYear} Kanal Bazli Adet Analizi`, 150, 15, { align: "center" });
+                    
+                    // Adet tablosunu ekle
+                    addTableToPDF(doc, document.getElementById('adetTable'), 25, fixTurkishText, selectedYear);
+                    
+                    // Bugünün tarihini al (dosya adı için)
+                    const today = new Date();
+                    const date = today.getDate() + '-' + (today.getMonth() + 1) + '-' + today.getFullYear();
+                    const fileName = 'Fraud_Trend_' + selectedYear + '_' + date + '.pdf';
+                    
+                    // PDF'i indir
+                    doc.save(fileName);
+                    console.log("PDF export completed");
+                } catch (error) {
+                    console.error("PDF dışa aktarma hatası:", error);
+                    alert("PDF dışa aktarma sırasında bir hata oluştu: " + error.message);
+                }
+            };
+            
+            // PDF'e tablo ekleme yardımcı fonksiyonu
+            function addTableToPDF(doc, table, startY, fixTurkishText, selectedYear) {
+                try {
+                    // Basitleştirilmiş veri yapısı
+                    const tableData = [];
+                    
+                    // Başlık satırı: 4 kategori için sütunlar (Türkçe karakterleri düzelt)
+                    const header = [
+                        "Kanal", 
+                        "Risk", "Musteri Zarari", "Banka Zarari", "Kurtarilan",
+                        "Risk", "Musteri Zarari", "Banka Zarari", "Kurtarilan",
+                        "Risk", "Musteri Zarari", "Banka Zarari", "Kurtarilan",
+                        "Risk", "Musteri Zarari", "Banka Zarari", "Kurtarilan",
+                        "Risk", "Musteri Zarari", "Banka Zarari", "Kurtarilan"
+                    ];
+                    
+                    tableData.push(header);
+                    
+                    // Her bir çeyrek için üst başlıklar ekleyin
+                    const quarterRow = ["", 
+                        `${selectedYear}-Q1`, "", "", "",
+                        `${selectedYear}-Q2`, "", "", "",
+                        `${selectedYear}-Q3`, "", "", "",
+                        `${selectedYear}-Q4`, "", "", "",
+                        `TOPLAM ${selectedYear}`, "", "", ""
+                    ];
+                    
+                    tableData.push(quarterRow);
+                    
+                    // Kanal listesi (Türkçe karakterleri düzeltilmiş)
+                    const channels = ['Dijital Bankacilik', 'Kart', 'POS', 'Basvuru', 'TOPLAM'];
+                    // Orijinal kanal isimleri
+                    const originalChannels = ['Dijital Bankacılık', 'Kart', 'POS', 'Başvuru', 'TOPLAM'];
+                    
+                    // Tüm satırları al
+                    const rows = table.querySelectorAll('tbody tr');
+                    
+                    // Her kanal için verileri ekle
+                    originalChannels.forEach((originalChannel, idx) => {
+                        // Bu kanal için satırı bul
+                        let tr = null;
+                        for (let i = 0; i < rows.length; i++) {
+                            const channelCell = rows[i].querySelector('.channel-col');
+                            if (channelCell && channelCell.textContent.trim() === originalChannel) {
+                                tr = rows[i];
+                                break;
+                            }
+                        }
+                        
+                        if (!tr) return;
+                        
+                        // Bu kanal için veri satırı oluştur (düzeltilmiş kanal ismi kullan)
+                        const rowData = [channels[idx]];
+                        
+                        // Her çeyrek için değerleri al
+                        const quarterBoxes = tr.querySelectorAll('.quarter-box');
+                        
+                        quarterBoxes.forEach(box => {
+                            const cells = box.querySelectorAll('.quarter-content td');
+                            cells.forEach(cell => {
+                                // Hücre değerini al ve Türkçe karakterleri düzelterek ekle
+                                const cellValue = cell.textContent.trim();
+                                // Sayı değilse ve boş değilse Türkçe karakterleri düzelt
+                                if (cellValue === '-') {
+                                    rowData.push('');
+                                } else if (isNaN(parseFloat(cellValue.replace(/\./g, '').replace(',', '.')))) {
+                                    rowData.push(fixTurkishText(cellValue));
+                                } else {
+                                    rowData.push(cellValue);
+                                }
+                            });
+                        });
+                        
+                        tableData.push(rowData);
+                    });
+                    
+                    // Tabloyu PDF'e ekle - Siyah-beyaz stille
+                    doc.autoTable({
+                        head: [tableData[0]],
+                        body: tableData.slice(2), // İlk iki satır (başlıklar) hariç
+                        didDrawPage: function(data) {
+                            // Çeyrek başlıklarını manuel olarak çiz
+                            doc.setFontSize(8);
+                            doc.setTextColor(0, 0, 0);
+                            
+                            // Q1 başlığı
+                            doc.text(`${selectedYear}-Q1`, 65, data.settings.startY - 5, { align: "center" });
+                            
+                            // Q2 başlığı
+                            doc.text(`${selectedYear}-Q2`, 110, data.settings.startY - 5, { align: "center" });
+                            
+                            // Q3 başlığı
+                            doc.text(`${selectedYear}-Q3`, 155, data.settings.startY - 5, { align: "center" });
+                            
+                            // Q4 başlığı
+                            doc.text(`${selectedYear}-Q4`, 200, data.settings.startY - 5, { align: "center" });
+                            
+                            // Toplam başlığı
+                            doc.text(`TOPLAM ${selectedYear}`, 245, data.settings.startY - 5, { align: "center" });
+                        },
+                        startY: startY,
+                        theme: 'grid',
+                        styles: {
+                            fontSize: 8,
+                            cellPadding: 2,
+                            lineColor: [0, 0, 0], // Siyah çizgiler
+                            lineWidth: 0.1,
+                        },
+                        headStyles: {
+                            fillColor: [240, 240, 240], // Açık gri
+                            textColor: [0, 0, 0], // Siyah metin
+                            fontStyle: 'bold'
+                        },
+                        alternateRowStyles: {
+                            fillColor: [250, 250, 250] // Çok açık gri
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 25, fontStyle: 'bold' } // Kanal sütunu
+                        },
+                        margin: { left: 10, right: 10 },
+                        tableWidth: 'auto'
+                    });
+                } catch (error) {
+                    console.error("Tablo oluşturma hatası:", error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
